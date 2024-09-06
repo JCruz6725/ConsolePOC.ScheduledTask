@@ -13,14 +13,13 @@ namespace ConsolePOC.ScheduledTask {
              * this the the general termination signal hook in it with the new event.
              * 
              */
-                
             Console.CancelKeyPress  += new ConsoleCancelEventHandler(CancelationEvent);
 
 
-            /* CLR call this Event/Function the the program exit.
+            /* 
+             * CLR call this Event/Function the the program exit.
              * We add a new event that gets called in addtion to other processes on exit
              */
-
             AppDomain.CurrentDomain.ProcessExit += new EventHandler(ExitEvent);
 			
             
@@ -38,7 +37,7 @@ namespace ConsolePOC.ScheduledTask {
 
             finally {
                 await Task.Delay(1000);
-                Console.WriteLine("Task clean up."); 
+                cleanDisposal();
             }
 
             await Task.Delay(1000);
@@ -55,8 +54,15 @@ namespace ConsolePOC.ScheduledTask {
         }
 
 
+
+        static void cleanDisposal() {
+            Console.WriteLine("Task clean up.");
+        }
+
+
         static void CancelationEvent(object? sender, ConsoleCancelEventArgs e ) {
             Console.WriteLine($"{nameof(CancelationEvent)}, Invoked");
+            cleanDisposal();
             Environment.Exit(0);
         }
 
