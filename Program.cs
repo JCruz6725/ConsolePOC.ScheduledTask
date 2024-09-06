@@ -1,13 +1,15 @@
 ﻿
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using System.Runtime.CompilerServices;
 
 namespace ConsolePOC.ScheduledTask {
     internal class Program {
-        string State = "init"; 
-            
+        string State = "init";
+        static ILogger<Program> _loggerCreate() => LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
+
         static async Task Main(string[] args) {
-                
-            
+            var _logger = _loggerCreate(); 
             /*
              * When the task scheduler and service managers call the 'stop' it trigger this ctr-c
              * this the the general termination signal hook in it with the new event.
@@ -15,19 +17,17 @@ namespace ConsolePOC.ScheduledTask {
              */
             Console.CancelKeyPress  += new ConsoleCancelEventHandler(CancelationEvent);
 
-
             /* 
              * CLR call this Event/Function the the program exit.
              * We add a new event that gets called in addtion to other processes on exit
              */
             AppDomain.CurrentDomain.ProcessExit += new EventHandler(ExitEvent);
-			
             
             try {
                 // Get the request from task scheduler to gracefully exit the task 
-                Console.WriteLine("Task starting.");
+                _logger.LogInformation("Task starting.");
                 int _ = await ScheduledTaskRunner(5);      
-                Console.WriteLine("Task complete.");
+                _logger.LogInformation("Task complete.");
 			}
 
 			catch(Exception) {
@@ -37,40 +37,42 @@ namespace ConsolePOC.ScheduledTask {
 
             finally {
                 await Task.Delay(1000);
-                cleanDisposal();
+                CleanDisposal();
             }
 
             await Task.Delay(1000);
-            Console.WriteLine("Task End.");
+            _logger.LogInformation("Task End.");
         }
 
         
         static async Task<int> ScheduledTaskRunner(int seconds) {
+            var _logger = _loggerCreate();
             for(int i = 1; i <= seconds; i++) {
                 await Task.Delay(1000); 
-                Console.WriteLine(i.ToString());
+                _logger.LogInformation(i.ToString());
             }
             return 0;         
         }
 
 
 
-        static void cleanDisposal() {
-            Console.WriteLine("Task clean up.");
+        static void CleanDisposal() {
+            var _logger = _loggerCreate();
+            _logger.LogInformation("Task clean up.");
         }
 
 
         static void CancelationEvent(object? sender, ConsoleCancelEventArgs e ) {
-            Console.WriteLine($"{nameof(CancelationEvent)}, Invoked");
-            cleanDisposal();
+            var _logger = _loggerCreate();
+            _logger.LogInformation($"{nameof(CancelationEvent)}, Invoked");
+            CleanDisposal();
             Environment.Exit(0);
         }
 
 
         static void ExitEvent(object? sender, EventArgs e) {
-            Console.WriteLine($"{nameof(ExitEvent)}, Invoked");
+            var _logger = _loggerCreate();
+            _logger.LogInformation($"{nameof(ExitEvent)}, Invoked");
         }
-
-
     }
 }
