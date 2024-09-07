@@ -2,28 +2,30 @@
 using NLog.Extensions.Logging;
 
 namespace ConsolePOC.ScheduledTask {
-    internal class Runner {
-        
+    /// <summary>
+    /// Base Runner class usable
+    /// </summary>
+    class Runner {
+
         bool _TaskComplete = false;
         bool _TaskInterupt = false;
         bool _GracefulShutdown = false;
-        
+
         ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
 
-
         public Runner() {
-            /*
+           /*
             * Hypothesis: When the task scheduler and service managers call the 'stop' it trigger this ctr-c
-            * this the the general termination signal hook in it with the new event.
+            * this the the general termination signal hook in it with the new event. Hypothesis - wrong. Task Scheduer
+            * does not call this termination signal
             * 
             * When invoking the interupt as the console window is open it will invoke the cancelation event
             * 
             * Will not invoke when task in running and the task is 'end'-ed 
-            * 
             */
             Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelationEvent);
 
-            /* 
+           /* 
             * CLR call this Event/Function the the program exit.
             * We add a new event that gets called in addtion to other processes on exit
             * 
@@ -33,13 +35,12 @@ namespace ConsolePOC.ScheduledTask {
         }
 
 
-        public async Task Run() {
+        public async Task Run(Action insertedAction) {
             try {
                 _logger.LogInformation("Task starting.");
-                
-                //Do something here
-                int _ = await DoSomething(2);
 
+                //Do something here
+                insertedAction();
 
                 _logger.LogInformation("Task complete.");
                 _TaskComplete = true;
@@ -47,19 +48,20 @@ namespace ConsolePOC.ScheduledTask {
 
             catch(Exception ex) {
                 await Task.Delay(1000);
-                _logger.LogCritical(ex, "CritalError");
+                _logger.LogCritical(ex, "CriticalError");
+                _TaskComplete = false;
 
             }
 
             finally {
                 await Task.Delay(1000);
-                _GracefulShutdown =  GrancefulAppShutdown();
+                //anything
             }
 
         }
 
-        
-        async Task<int> DoSomething(int seconds) {
+
+        public async Task<int> DoSomething(int seconds) {
             for(int i = 1; i <= seconds; i++) {
                 await Task.Delay(1000);
                 _logger.LogInformation(i.ToString());
@@ -67,20 +69,24 @@ namespace ConsolePOC.ScheduledTask {
             return 0;
         }
 
-        
+
+        //Public API override interface. these fuctions to add addtion actions. 
+        public virtual void CancelationSequece() { }
+        public virtual void ExitSequece() { }
+        public virtual void GrancefulShutdownSequence() { }
 
 
 
-        bool GrancefulAppShutdown() {
-
-            //Add AnyShut down Logic here...
-
+        //Private caller mothod to the Public API 
+        // Used to Encapsulate addional loginc and rule
+        bool _GrancefulShutdownSequence() {
+            GrancefulShutdownSequence();
             _logger.LogInformation("Task clean up.");
             return true;
         }
-
-
          
+        void _CancelationSequece() => CancelationSequece();
+        void _ExitSequece() => ExitSequece();
 
         /*
          * Hooks below
@@ -91,8 +97,16 @@ namespace ConsolePOC.ScheduledTask {
          */
         void CancelationEvent(object? sender, ConsoleCancelEventArgs e) {
             _logger.LogWarning($"{nameof(CancelationEvent)}, Invoked");
-            GrancefulAppShutdown();
             _TaskInterupt = true;
+            if (_GracefulShutdown)
+                _GracefulShutdown = _GrancefulShutdownSequence();
+            
+            try {
+                _CancelationSequece();
+            }
+            catch(Exception ex) {
+                _logger.LogError($"Error in the {nameof(CancelationSequece)}\n {ex.Message}\n {ex.StackTrace}");
+            }
 
             // Invoke the ExitEvent. Required, will cause a hang in CancellationEvent if not called
             Environment.Exit(0); 
@@ -100,18 +114,27 @@ namespace ConsolePOC.ScheduledTask {
 
 
         void ExitEvent(object? sender, EventArgs e) {
-   
-            if (!_TaskComplete || _TaskInterupt ) {
-                if(!_TaskComplete) { 
+            if(!_GracefulShutdown) 
+                _GracefulShutdown = _GrancefulShutdownSequence();
+            
+            
+            if(!_TaskComplete || _TaskInterupt) {
+                if(!_TaskComplete) {
                     _logger.LogCritical($"{nameof(ExitEvent)} Invoked: Incomplete run.");
                     return;
                 }
-                if(!_TaskInterupt) {
+                if(_TaskInterupt) {
                     _logger.LogCritical($"{nameof(ExitEvent)} Invoked: Interupted run.");
                     return;
                 }
             }
-            
+            try {
+                _ExitSequece();
+            }
+            catch(Exception ex) {
+                _logger.LogError($"Error in the {nameof(ExitSequece)}\n {ex.Message}\n {ex.StackTrace}");
+            }
+
             _logger.LogInformation($"{nameof(ExitEvent)}, Invoked: Run Complete.");
             return;
         }
