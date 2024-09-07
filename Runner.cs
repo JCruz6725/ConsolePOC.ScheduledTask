@@ -16,8 +16,9 @@ namespace ConsolePOC.ScheduledTask {
         public Runner() {
            /*
             * Hypothesis: When the task scheduler and service managers call the 'stop' it trigger this ctr-c
-            * this the the general termination signal hook in it with the new event. Hypothesis - wrong. Task Scheduer
-            * does not call this termination signal
+            * this the the general termination signal hook in it with the new event. 
+            * 
+            * Hypothesis - wrong. Task Scheduer does not call this termination signal. It may not have one at all
             * 
             * When invoking the interupt as the console window is open it will invoke the cancelation event
             * 
@@ -35,11 +36,10 @@ namespace ConsolePOC.ScheduledTask {
         }
 
 
-        public async Task Run(Action insertedAction) {
+        public void Run(Action insertedAction, Action? finallyAction = null) {
             try {
                 _logger.LogInformation("Task starting.");
 
-                //Do something here
                 insertedAction();
 
                 _logger.LogInformation("Task complete.");
@@ -47,19 +47,15 @@ namespace ConsolePOC.ScheduledTask {
             }
 
             catch(Exception ex) {
-                await Task.Delay(1000);
                 _logger.LogCritical(ex, "CriticalError");
                 _TaskComplete = false;
-
             }
 
             finally {
-                await Task.Delay(1000);
-                //anything
+                if (finallyAction is not null)
+                    finallyAction();
             }
-
         }
-
 
         public async Task<int> DoSomething(int seconds) {
             for(int i = 1; i <= seconds; i++) {
@@ -77,7 +73,7 @@ namespace ConsolePOC.ScheduledTask {
 
 
 
-        //Private caller mothod to the Public API 
+        // Private caller mothod to the Public API 
         // Used to Encapsulate addional loginc and rule
         bool _GrancefulShutdownSequence() {
             GrancefulShutdownSequence();
@@ -116,7 +112,6 @@ namespace ConsolePOC.ScheduledTask {
         void ExitEvent(object? sender, EventArgs e) {
             if(!_GracefulShutdown) 
                 _GracefulShutdown = _GrancefulShutdownSequence();
-            
             
             if(!_TaskComplete || _TaskInterupt) {
                 if(!_TaskComplete) {
