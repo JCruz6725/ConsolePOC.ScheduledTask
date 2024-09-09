@@ -7,8 +7,7 @@ namespace ConsolePOC.ScheduledTask {
     /// </summary>
     class Runner {
 
-
-        // Move into a __Task__ .......
+        // Move into a Task-Like Object.......
         bool _TaskComplete = false;
         bool _TaskInterrupt = false;
         bool _GracefulShutdown = false;
@@ -57,14 +56,6 @@ namespace ConsolePOC.ScheduledTask {
                 if (finalAction is not null)
                     finalAction();
             }
-        }
-
-        public async Task<int> DoSomething(int iterations) {
-            for(int iter = 1; iter <= iterations; iter++) {
-                await Task.Delay(1000);
-                _logger.LogInformation(iter.ToString());
-            }
-            return 0;
         }
 
 
