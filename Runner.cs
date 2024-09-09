@@ -36,7 +36,7 @@ namespace ConsolePOC.ScheduledTask {
         }
 
 
-        public void Run(Action insertedAction, Action? finallyAction = null) {
+        public void Run(Action insertedAction, Action? finalAction = null) {
             try {
                 _logger.LogInformation("Task starting.");
 
@@ -47,13 +47,13 @@ namespace ConsolePOC.ScheduledTask {
             }
 
             catch(Exception ex) {
-                _logger.LogCritical(ex, "CriticalError");
+                _logger.LogCritical(ex, $"CriticalError executing {nameof(insertedAction)}");
                 _TaskComplete = false;
             }
 
             finally {
-                if (finallyAction is not null)
-                    finallyAction();
+                if (finalAction is not null)
+                    finalAction();
             }
         }
 
@@ -104,8 +104,9 @@ namespace ConsolePOC.ScheduledTask {
                 _logger.LogError($"Error in the {nameof(CancelationSequece)}\n {ex.Message}\n {ex.StackTrace}");
             }
 
-            // Invoke the ExitEvent. Required, will cause a hang in CancellationEvent if not called
-            Environment.Exit(0); 
+            // Invoke the ExitEvent. Required, will cause a hang in CancellationEvent if not called.
+            // Exit code is not read by the OS as far as I can tell.
+            Environment.Exit(1); 
         }
 
 

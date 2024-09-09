@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="NLog" Version="5.3.3" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.12" />
+    <PackageReference Include="NLog.WindowsEventLog" Version="5.3.3" />
     <None Update="nlog.config" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
