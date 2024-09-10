@@ -10,7 +10,7 @@ namespace ConsolePOC.ScheduledTask {
         // Move into a Task-Like Object.......
         bool _TaskComplete = false;
         bool _TaskInterrupt = false;
-        bool _GracefulShutdown = false;
+        bool _HasGracefullyShutdown = false;
 
         ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
 
@@ -25,18 +25,22 @@ namespace ConsolePOC.ScheduledTask {
             * 
             * Will not invoke when task in running and the task is 'end'-ed 
             */
-            Console.CancelKeyPress += new ConsoleCancelEventHandler(CancellationEvent);
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Cancel);
 
-           /* 
-            * CLR call this Event/Function the the program exit.
-            * We add a new event that gets called in addition to other processes on exit
-            * 
-            * Confirmed that the process exit is called when task scheduler interrupts the process.
-            */
-            AppDomain.CurrentDomain.ProcessExit += new EventHandler(ExitEvent);
+
+            
+
+            /* 
+             * CLR call this Event/Function the the program exit.
+             * We add a new event that gets called in addition to other processes on exit
+             * 
+             * Confirmed that the process exit is called when task scheduler interrupts the process.
+             */
+            AppDomain.CurrentDomain.ProcessExit += new EventHandler(Exit);
         }
 
 
+        #region public inteface
         public void Run(Action insertedAction, Action? finalAction = null) {
             try {
                 _logger.LogInformation("Task starting.");
@@ -60,23 +64,71 @@ namespace ConsolePOC.ScheduledTask {
 
 
         //Public API override interface. these functions to add addition actions. 
-        public virtual void CancelationSequence() { }
-        public virtual void ExitSequence() { }
-        public virtual void GracefulShutdownSequence() { }
+        public virtual void CustomCancellation() { }
+        public virtual void CustomExit() { }
+        public virtual void CustomGracefulShutdown() { }
+
+        
+        /// <summary>
+        /// Manually Invoke Cancellation. Will call CustomCancellation if overrode.
+        /// </summary>
+        public void InvokeCancellation() => _BaseCancel();
+        #endregion
 
 
-
-        // Private caller method to the Public API 
-        // Used to Encapsulate additional logic and rule
-        bool _GracefulShutdownSequence() {
-            GracefulShutdownSequence();
+        #region private callers 
+        // Private caller method to the Public API.
+        // Used to Encapsulate additional logic and rules
+        // while still allowing user to override
+        bool _CallerToCustomGracefulShutdown() {
             _logger.LogInformation("Task clean up.");
-            return true;
-        }
-         
-        void _CancelationSequence() => CancelationSequence();
-        void _ExitSequence() => ExitSequence();
 
+            try {
+                CustomGracefulShutdown();
+                return true;
+            }
+            catch(Exception ex) {
+                _logger.LogWarning($"Warning {nameof(CustomGracefulShutdown)} Did not complete \nMessage: {ex.Message}\n{ex.StackTrace} ");
+
+                return false;
+            }
+        }
+
+        void _CallerToCustomCancellation() {
+            try {
+                CustomCancellation();
+            }
+            catch(Exception ex) {
+                _logger.LogError($"Error in the {nameof(CustomCancellation)}\n {ex.Message}\n {ex.StackTrace}");
+            }
+        }
+
+        void _CallerToCustomExit() {
+            try {
+                CustomExit();
+            }
+            catch(Exception ex) {
+                _logger.LogError($"Error in the {nameof(CustomExit)}\n {ex.Message}\n {ex.StackTrace}");
+                return;
+            }
+        }
+
+        #region base
+        void _BaseCancel() {
+            _TaskInterrupt = true;
+            _logger.LogWarning($"{nameof(Cancel)}, Invoked");
+            _CallerToCustomCancellation();
+
+            // Invoke the ExitEvent. Required, will cause a hang in CancellationEvent if not called.
+            // Exit code is not read by the OS as far as I can tell.
+            Environment.Exit(1);
+
+        }
+        #endregion
+        #endregion
+
+
+        #region Hooks
         /*
          * Hooks below
          * Leave the blank returns this code is part of the shutdown sequence 
@@ -84,49 +136,30 @@ namespace ConsolePOC.ScheduledTask {
          * that this will pollute the 'EventView' logs. NO INTENTIONAl TOP-LEVEL EXCEPTIONS.
          * Let logs do their jobs.
          */
-        void CancellationEvent(object? sender, ConsoleCancelEventArgs e) {
-            _logger.LogWarning($"{nameof(CancellationEvent)}, Invoked");
-            _TaskInterrupt = true;
-            if (_GracefulShutdown)
-                _GracefulShutdown = _GracefulShutdownSequence();
+
+        void Cancel(object? sender, ConsoleCancelEventArgs e) => _BaseCancel();
+
+        void Exit(object? sender, EventArgs e) {
+            if(!_HasGracefullyShutdown)
+                _HasGracefullyShutdown = _CallerToCustomGracefulShutdown();
             
-            try {
-                _CancelationSequence();
-            }
-            catch(Exception ex) {
-                _logger.LogError($"Error in the {nameof(CancelationSequence)}\n {ex.Message}\n {ex.StackTrace}");
-            }
-
-            // Invoke the ExitEvent. Required, will cause a hang in CancellationEvent if not called.
-            // Exit code is not read by the OS as far as I can tell.
-            Environment.Exit(1); 
-        }
-
-
-        void ExitEvent(object? sender, EventArgs e) {
-            if(!_GracefulShutdown) 
-                _GracefulShutdown = _GracefulShutdownSequence();
-            
-            // Convert to switch statement? only one can be active at a time
             if(!_TaskComplete || _TaskInterrupt) {
                 if(_TaskInterrupt) {
-                    _logger.LogCritical($"{nameof(ExitEvent)} Invoked: Interupted run.");
+                    _logger.LogCritical($"{nameof(Exit)} Invoked: Interrupted run.");
                     return;
                 }
                 if(!_TaskComplete) {
-                    _logger.LogCritical($"{nameof(ExitEvent)} Invoked: Incomplete run.");
+                    EventId a = new EventId(1000);
+                    _logger.LogCritical(a,$"{nameof(Exit)} Invoked: Incomplete run.");
                     return;
                 }
             }
-            try {
-                _ExitSequence();
-            }
-            catch(Exception ex) {
-                _logger.LogError($"Error in the {nameof(ExitSequence)}\n {ex.Message}\n {ex.StackTrace}");
-            }
+            _CallerToCustomExit();
 
-            _logger.LogInformation($"{nameof(ExitEvent)}, Invoked: Run Complete.");
+
+            _logger.LogInformation($"{nameof(Exit)}, Invoked: Run Complete.");
             return;
         }
+        #endregion
     }
 }
