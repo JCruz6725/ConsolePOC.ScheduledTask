@@ -3,17 +3,20 @@ using NLog.Extensions.Logging;
 
 namespace ConsolePOC.ScheduledTask {
     /// <summary>
-    /// Base Runner class usable
+    /// A base class for safely executing and managing the state of a windows task. Hooks into the the console app lifecycle (Cancelation, Exit).
     /// </summary>
     class Runner {
 
-        // Move into a Task-Like Object.......
-        bool _TaskComplete = false;
-        bool _TaskInterrupt = false;
-        bool _HasGracefullyShutdown = false;
+        public bool TaskComplete { get; private set; } = false;
+        public bool TaskInterrupt { get; private set; } = false;
+        public bool HasGracefullyShutdown { get; private set; } = false;
+        
+        private ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
 
-        ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
 
+        /// <summary>
+        /// A base class for safely executing and managing the state of a windows task/operation.
+        /// </summary>
         public Runner() {
            /*
             * Hypothesis: When the task scheduler and service managers call the 'stop' it trigger this ctr-c
@@ -26,8 +29,6 @@ namespace ConsolePOC.ScheduledTask {
             * Will not invoke when task in running and the task is 'end'-ed 
             */
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Cancel);
-
-
             
 
             /* 
@@ -41,6 +42,12 @@ namespace ConsolePOC.ScheduledTask {
 
 
         #region public inteface
+        /// <summary>
+        /// Safely executes the <paramref name="insertedAction"/> and [<paramref name="finalAction"/>] within the framework of the the class.  
+        /// </summary>
+        /// <remarks><paramref name="finalAction"/> is optional if included will run after <paramref name="insertedAction"/> but prior to cancellation, gracefulExit, and exit life cycle. Runs regardless if <paramref name="insertedAction"/> is successful.</remarks>
+        /// <param name="insertedAction"></param>
+        /// <param name="finalAction"></param>
         public void Run(Action insertedAction, Action? finalAction = null) {
             try {
                 _logger.LogInformation("Task starting.");
@@ -48,12 +55,12 @@ namespace ConsolePOC.ScheduledTask {
                 insertedAction();
 
                 _logger.LogInformation("Task complete.");
-                _TaskComplete = true;
+                TaskComplete = true;
             }
 
             catch(Exception ex) {
                 _logger.LogCritical(ex, $"Critical Error executing {nameof(insertedAction)}");
-                _TaskComplete = false;
+                TaskComplete = false;
             }
 
             finally {
@@ -64,14 +71,31 @@ namespace ConsolePOC.ScheduledTask {
 
 
         //Public API override interface. these functions to add addition actions. 
-        public virtual void CustomCancellation() { }
-        public virtual void CustomExit() { }
-        public virtual void CustomGracefulShutdown() { }
 
+
+
+        /// <summary>
+        /// Virtual method. Use to add addtional functionality
+        /// </summary>
+        public virtual void CustomCancellation() { }
+        
         
         /// <summary>
-        /// Manually Invoke Cancellation. Will call CustomCancellation if overrode.
+        /// 
         /// </summary>
+        public virtual void CustomExit() { }
+        
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        public virtual void CustomGracefulShutdown() { }
+
+
+        /// <summary>
+        /// Manually Invoke the Cancellation. Will call CustomCancellation if overrode.
+        /// </summary>
+        /// <remarks> Will call CustomCancellation if overrode.</remarks>
         public void InvokeCancellation() => _BaseCancel();
         #endregion
 
@@ -80,7 +104,9 @@ namespace ConsolePOC.ScheduledTask {
         // Private caller method to the Public API.
         // Used to Encapsulate additional logic and rules
         // while still allowing user to override
-        bool _CallerToCustomGracefulShutdown() {
+
+
+        private bool _CallerToCustomGracefulShutdown() {
             _logger.LogInformation("Task clean up.");
 
             try {
@@ -94,7 +120,7 @@ namespace ConsolePOC.ScheduledTask {
             }
         }
 
-        void _CallerToCustomCancellation() {
+        private void _CallerToCustomCancellation() {
             try {
                 CustomCancellation();
             }
@@ -103,7 +129,7 @@ namespace ConsolePOC.ScheduledTask {
             }
         }
 
-        void _CallerToCustomExit() {
+        private void _CallerToCustomExit() {
             try {
                 CustomExit();
             }
@@ -114,8 +140,8 @@ namespace ConsolePOC.ScheduledTask {
         }
 
         #region base
-        void _BaseCancel() {
-            _TaskInterrupt = true;
+        private void _BaseCancel() {
+            TaskInterrupt = true;
             _logger.LogWarning($"{nameof(Cancel)}, Invoked");
             _CallerToCustomCancellation();
 
@@ -137,18 +163,18 @@ namespace ConsolePOC.ScheduledTask {
          * Let logs do their jobs.
          */
 
-        void Cancel(object? sender, ConsoleCancelEventArgs e) => _BaseCancel();
+        private void Cancel(object? sender, ConsoleCancelEventArgs e) => _BaseCancel();
 
-        void Exit(object? sender, EventArgs e) {
-            if(!_HasGracefullyShutdown)
-                _HasGracefullyShutdown = _CallerToCustomGracefulShutdown();
+        private void Exit(object? sender, EventArgs e) {
+            if(!HasGracefullyShutdown)
+                HasGracefullyShutdown = _CallerToCustomGracefulShutdown();
             
-            if(!_TaskComplete || _TaskInterrupt) {
-                if(_TaskInterrupt) {
+            if(!TaskComplete || TaskInterrupt) {
+                if(TaskInterrupt) {
                     _logger.LogCritical($"{nameof(Exit)} Invoked: Interrupted run.");
                     return;
                 }
-                if(!_TaskComplete) {
+                if(!TaskComplete) {
                     EventId a = new EventId(1000);
                     _logger.LogCritical(a,$"{nameof(Exit)} Invoked: Incomplete run.");
                     return;
