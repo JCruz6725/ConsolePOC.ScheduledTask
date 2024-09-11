@@ -97,7 +97,8 @@ Creates a record in the registry. Required, will cause a error in the event view
   https://github.com/NLog/NLog/wiki/EventLog-target#notes
 
 ### To-Do
-- Runner class has dependency in the NLog for logging. Need to be rewritten with DI to fix.
+- [ ] Runner class has dependency in the NLog for logging. Need to be rewritten with DI to fix.
 
-- Fix Constructor documentation.
+- [ ] Fix Constructor documentation.
 
+- [ ] Rename the project to ..?..
