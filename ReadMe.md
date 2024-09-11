@@ -8,12 +8,14 @@ A simple framework/boiler plate code that is used to build a "Windows Task Sched
 
 ### App lifecycle
 ```mermaid
-graph LR;
-    StartApp-->MainLoop;
-    MainLoop-->GraceFullExit;
+graph TD;
+    id([AppStart])-->MainLoop;
+    MainLoop-->GracefulExit;
     MainLoop-->Cancellation;
-    Cancellation-->GraceFullExit;
-    GraceFullExit-->Exit;
+    Cancellation-->GracefulExit;
+    GracefulExit-->Exit;
+    Exit-->id1([AppTermination]);
+
     
 ```
 
