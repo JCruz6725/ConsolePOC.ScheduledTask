@@ -4,6 +4,7 @@ namespace ConsolePOC.ScheduledTask {
         static async Task Main(string[] args) {
             Runner runner = new Runner();
             runner.Run(() => { DoSomething(5).Wait(); });
+            throw new Exception("Random Failure");
         }
 
 
