@@ -75,27 +75,30 @@ namespace ConsolePOC.ScheduledTask {
 
 
         /// <summary>
-        /// Virtual method. Use to add addtional functionality
+        /// Virtual method. Use to add additional functionality in the cancellation lifecycle.
         /// </summary>
+        /// <remarks>A default behavior of doing nothing.</remarks>
         public virtual void CustomCancellation() { }
-        
-        
+
+
         /// <summary>
-        /// 
+        /// Virtual method. Use to add additional functionality in the exit lifecycle.
         /// </summary>
+        /// <remarks>A default behavior of doing nothing.</remarks>
         public virtual void CustomExit() { }
-        
-        
+
+
         /// <summary>
-        /// 
+        /// Virtual method. Use to add additional functionality in the graceful shutdown lifecycle.
         /// </summary>
+        /// <remarks>A default behavior of doing nothing.</remarks>
         public virtual void CustomGracefulShutdown() { }
 
 
         /// <summary>
-        /// Manually Invoke the Cancellation. Will call CustomCancellation if overrode.
+        /// Manually Invoke the Cancellation.
         /// </summary>
-        /// <remarks> Will call CustomCancellation if overrode.</remarks>
+        /// <remarks> Will call CustomCancellation lifecycle.</remarks>
         public void InvokeCancellation() => _BaseCancel();
         #endregion
 
