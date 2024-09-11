@@ -2,20 +2,19 @@
 using NLog.Extensions.Logging;
 
 namespace ConsolePOC.ScheduledTask {
+
     /// <summary>
     /// A base class for safely executing and managing the state of a windows task. Hooks into the the console app lifecycle (Cancelation, Exit).
     /// </summary>
     class Runner {
-
         public bool TaskComplete { get; private set; } = false;
         public bool TaskInterrupt { get; private set; } = false;
         public bool HasGracefullyShutdown { get; private set; } = false;
         
         private ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
 
-
         /// <summary>
-        /// A base class for safely executing and managing the state of a windows task/operation.
+        /// A base class for safely executing and managing the state of a windows task/operation within the windows task scheduler.
         /// </summary>
         public Runner() {
            /*
@@ -30,7 +29,6 @@ namespace ConsolePOC.ScheduledTask {
             */
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Cancel);
             
-
             /* 
              * CLR call this Event/Function the the program exit.
              * We add a new event that gets called in addition to other processes on exit
@@ -45,7 +43,7 @@ namespace ConsolePOC.ScheduledTask {
         /// <summary>
         /// Safely executes the <paramref name="insertedAction"/> and [<paramref name="finalAction"/>] within the framework of the the class.  
         /// </summary>
-        /// <remarks><paramref name="finalAction"/> is optional if included will run after <paramref name="insertedAction"/> but prior to cancellation, gracefulExit, and exit life cycle. Runs regardless if <paramref name="insertedAction"/> is successful.</remarks>
+        /// <remarks>[<paramref name="finalAction"/>] is optional if included will run after <paramref name="insertedAction"/> but prior to cancellation, gracefulExit, and exit life cycle. Runs regardless if <paramref name="insertedAction"/> is successful.</remarks>
         /// <param name="insertedAction"></param>
         /// <param name="finalAction"></param>
         public void Run(Action insertedAction, Action? finalAction = null) {
@@ -62,7 +60,6 @@ namespace ConsolePOC.ScheduledTask {
                 _logger.LogCritical(ex, $"Critical Error executing {nameof(insertedAction)}");
                 TaskComplete = false;
             }
-
             finally {
                 if (finalAction is not null)
                     finalAction();
@@ -71,8 +68,6 @@ namespace ConsolePOC.ScheduledTask {
 
 
         //Public API override interface. these functions to add addition actions. 
-
-
 
         /// <summary>
         /// Virtual method. Use to add additional functionality in the cancellation lifecycle.
@@ -96,7 +91,7 @@ namespace ConsolePOC.ScheduledTask {
 
 
         /// <summary>
-        /// Manually Invoke the Cancellation.
+        /// Manually Invoke the Cancellation lifecycle.
         /// </summary>
         /// <remarks> Will call CustomCancellation lifecycle.</remarks>
         public void InvokeCancellation() => _BaseCancel();
@@ -123,6 +118,7 @@ namespace ConsolePOC.ScheduledTask {
             }
         }
 
+
         private void _CallerToCustomCancellation() {
             try {
                 CustomCancellation();
@@ -131,6 +127,7 @@ namespace ConsolePOC.ScheduledTask {
                 _logger.LogError($"Error in the {nameof(CustomCancellation)}\n {ex.Message}\n {ex.StackTrace}");
             }
         }
+
 
         private void _CallerToCustomExit() {
             try {
@@ -142,7 +139,10 @@ namespace ConsolePOC.ScheduledTask {
             }
         }
 
+
         #region base
+
+
         private void _BaseCancel() {
             TaskInterrupt = true;
             _logger.LogWarning($"{nameof(Cancel)}, Invoked");
@@ -153,11 +153,17 @@ namespace ConsolePOC.ScheduledTask {
             Environment.Exit(1);
 
         }
+
+
         #endregion
+        
+        
         #endregion
 
 
         #region Hooks
+
+
         /*
          * Hooks below
          * Leave the blank returns this code is part of the shutdown sequence 
@@ -166,7 +172,9 @@ namespace ConsolePOC.ScheduledTask {
          * Let logs do their jobs.
          */
 
+
         private void Cancel(object? sender, ConsoleCancelEventArgs e) => _BaseCancel();
+
 
         private void Exit(object? sender, EventArgs e) {
             if(!HasGracefullyShutdown)
@@ -185,10 +193,13 @@ namespace ConsolePOC.ScheduledTask {
             }
             _CallerToCustomExit();
 
-
             _logger.LogInformation($"{nameof(Exit)}, Invoked: Run Complete.");
             return;
         }
+
+
         #endregion
+    
+    
     }
 }
