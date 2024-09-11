@@ -3,7 +3,7 @@ namespace ConsolePOC.ScheduledTask {
     internal class Program {
         static async Task Main(string[] args) {
             Runner runner = new Runner();
-            runner.Run(() => { DoSomething(5).Wait(); });
+            runner.Run(() => { DoSomething(5, 25).Wait(); });
         }
 
 
