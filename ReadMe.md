@@ -36,10 +36,10 @@ runner.Run( () => { SomeAction(); } )
 
 ## Extending Functionality of the Runner
 
-Addtionality, we can extend the functionality and create a derive class to override the `CustomGracefulShutdown`, `CustomCancellation`, and `CustomExit` methods. These additional controls are tide to the apps lifecycles.
+Additionality, we can extend the functionality and create a derive class to override the `CustomGracefulShutdown`, `CustomCancellation`, and `CustomExit` methods. These additional controls are tide to the apps lifecycles.
 
 ## Overview
-The `Runner` is a manager for the task that are scheduled to run with the Windows Task Scheduler. It is a base class that contains basic functionality can be extendend.
+The `Runner` is a manager for the task that are scheduled to run with the Windows Task Scheduler. It is a base class that contains basic functionality can be extended.
 
 ### Constructor
 - **`Runner()`**
@@ -47,7 +47,7 @@ The `Runner` is a manager for the task that are scheduled to run with the Window
 
 ### Properties
 - **`bool TaskComplete`**
-  - **Get** whether or not the inserted action ran by the runner has completed succesfully.
+  - **Get** whether or not the inserted action ran by the runner has completed successfully.
   - On instantiation is **false**
 
 - **`bool TaskInterrupted`**
@@ -67,37 +67,38 @@ The `Runner` is a manager for the task that are scheduled to run with the Window
       - `Action insertedAction` - A passed in action to be executed and managed by the runner class.
       - `Action? finalAction = null ` - An optional Action that will execute in the ``final`` block of the main `try` `catch`.
 - **`Void InvokeCancellation()`**
-  - **Description:** Programmaticly invoke the cancellation sequence. Fire off termination signal to console app. Equivlent to `ctr+c` or `ctr+break`.
+  - **Description:** Programmatically invoke the cancellation sequence. Fire off termination signal to console app. Equivalent to `ctr+c` or `ctr+break`.
 
 #### Virtual
 - **`Virtual Void CustomGracefulShutdown()`**
-    - **Description:** The graceful shutdown sequence acts as a safe guard to dispose, or log any resources that are need. The CustomGracefulShutdown when overriden prodives an additional mechinism to log, dipose, capture data, or start other actions. Runs at on task complete or when the task is interupted by a termination signal. Always runs. 
+    - **Description:** The graceful shutdown sequence acts as a safe guard to dispose, or log any resources that are need. The CustomGracefulShutdown when overridden provides an additional mechanism to log, dispose, capture data, or start other actions. Runs at on task complete or when the task is interrupted by a termination signal. Always runs. 
 - **`Virtual Void CustomCancellation()`**
     - **Description:**  The cancellation method or sequence is call when the app detects the termination 
 - **`Virtual Void CustomExit()`**
-    - **Description:** The Exit sequence terminal to all process. The CustomGracefulShutdown when overriden prodives an additional mechinism to log, dipose, capture data, or start other actions. Always runs and isa last line defence for actions or items. Items here must be as atomic as posible and must stable. **Exersise caution** when overiding as volitile actions/item will have dire consequnces to overall app integrety. Move volile action to GracefulShutdown sequence.  Always runs.
+    - **Description:** The Exit sequence terminal to all process. The CustomGracefulShutdown when overridden provides an additional mechanism to log, dispose, capture data, or start other actions. Always runs and isa last line defense for actions or items. Items here must be as atomic as possible and must stable. **Exercise caution** when overriding as volatile actions/item will have dire consequences to overall app integrity. Move volatile action to GracefulShutdown sequence.  Always runs.
 
 
 ## Remarks
 
-With in the Windows Task Scheduler, there is no way to view whether or not the task actually ran correctly. Although the history tab appears to be a way to determine whether it did it is miss leading. What it actually records/displays is whether the task schedualler it self was able to run the app. I.e. it would fail if the task scheduler has insufficeint persmisions to the app or wasnt able to locate the app in the location specified when creating the task. This is futher confirm by looking at the history tab and looking at the source column which all say task scheduler and not the app that we manully registered.
+With in the Windows Task Scheduler, there is no way to view whether or not the task actually ran correctly. Although the history tab appears to be a way to determine whether it did it is miss leading. What it actually records/displays is whether the task scheduler it self was able to run the app. I.e. it would fail if the task scheduler has insufficient permissions to the app or wasn't able to locate the app in the location specified when creating the task. This is further confirm by looking at the history tab and looking at the source column which all say task scheduler and not the app that we manually registered.
 
-This is where the windows event viewer comes into play. With the registration we can can see, once we add the app as a task and schedual a run, that the app is printing the event view. Depending how the app is written  we and futher applify or dilute the amount of logs we see.
+This is where the windows event viewer comes into play. With the registration we can can see, once we add the app as a task and schedule a run, that the app is printing the event view. Depending how the app is written  we and further amplify or dilute the amount of logs we see.
 
-Addtionally If the app where to crash, unhandle execption, the Common Language Runtime (CLR) creates an event, a default behavior. There is a mechanism in the CLR to provide this log in the event viewer even with logging configutrrations with in the app. this is severly limited to unhandle exceptiong though and even then we are un able to distigish trait with in the clr event to ditinguse the what app crash. the event describes a proble with the clr and only by reading th edescription of the event are able to determin what app crash. This isnt ideal as you cannot trigger any aditional events to the the App it self. is you were to try and schedual a task base on this crash it event it would fire off every time a app crash the clr even if it is unrealated.
+Additionally if the app where to crash, unhandled exception, the Common Language Runtime (CLR) creates an event, a default behavior. There is a mechanism in the CLR to provide this log in the event viewer even with logging configurations with in the app. This is severely limited to unhandled exceptions though and even then we are unable to distinguish traits with in the clr events and what app crash. the event describes a problem with the clr and only by reading the description of the event are able to determine what app crash. This isn't ideal as you cannot trigger any additional events to the the App it self. is you were to try and schedule a task base on this crash it event it would fire off every time a app crash the clr even if it is unrelated.
 
-### Addtional Remarks: Event Viewer
-If using the event viewer for loging prior to the installation the app must be registered, use the following command. 
+### Additional Remarks: Event Viewer
+If using the event viewer for logging prior to the installation the app must be registered, use the following command. 
 
 	New-EventLog -LogName Application -Source "ConsolePOC.ScheduledTask"
 
-Creates a record in the regitry. Required, will cause a error in the event viewer.
+Creates a record in the registry. Required, will cause a error in the event viewer.
 
 #### Source
   https://github.com/NLog/NLog/wiki/EventLog-target#notes
 
 ### To-Do
-- Runner class has depedency in the nlog for logging. Need to be rewriten with DI to fix.
+- [ ] Runner class has dependency in the NLog for logging. Need to be rewritten with DI to fix.
 
-- Fix Contrustor documentation.
+- [ ] Fix Constructor documentation.
 
+- [ ] Rename the project to ..?..
