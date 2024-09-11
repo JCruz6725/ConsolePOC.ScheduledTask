@@ -41,11 +41,11 @@ Addtionality, we can extend the functionality and create a derive class to overr
 ## Overview
 The `Runner` is a manager for the task that are scheduled to run with the Windows Task Scheduler. It is a base class that contains basic functionality can be extendend.
 
-Initializes the class.
-`Runner()`
+### Constructor
+- **`Runner()`**
+  - **Description:** Initializes class.
 
 ### Properties
-
 - **`bool TaskComplete`**
   - **Get** whether or not the inserted action ran by the runner has completed succesfully.
   - On instantiation is **false**
@@ -97,4 +97,7 @@ Creates a record in the regitry. Required, will cause a error in the event viewe
   https://github.com/NLog/NLog/wiki/EventLog-target#notes
 
 ### To-Do
-Runner class has depedency in the nlog for logging. Need to be rewriten with DI to fix.
+- Runner class has depedency in the nlog for logging. Need to be rewriten with DI to fix.
+
+- Fix Contrustor documentation.
+
