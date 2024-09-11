@@ -15,8 +15,6 @@ graph TD;
     Cancellation-->GracefulExit;
     GracefulExit-->Exit;
     Exit-->id1([AppTermination]);
-
-    
 ```
 
 
