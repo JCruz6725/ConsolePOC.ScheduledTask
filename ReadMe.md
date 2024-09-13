@@ -100,7 +100,7 @@ If you need a mechanism to look at "exit codes," you can use the eventID as a ps
  https://github.com/NLog/NLog/wiki/EventLog-target#notes
 
 ### To-Do
-- [ ] Runner class has a dependency in the NLog for logging. Need to be rewritten with DI to fix it.
+- [x] Runner class has a dependency in the NLog for logging. Need to be rewritten with DI to fix it. (See 'di' branch)
 
 - [ ] Fix Constructor documentation.
 
