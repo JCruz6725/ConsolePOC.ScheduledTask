@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using NLog.Extensions.Logging;
 
 namespace ConsolePOC.ScheduledTask {
 
@@ -11,12 +10,13 @@ namespace ConsolePOC.ScheduledTask {
         public bool TaskInterrupt { get; private set; } = false;
         public bool HasGracefullyShutdown { get; private set; } = false;
         
-        private ILogger<Program> _logger = LoggerFactory.Create(builder => builder.AddNLog()).CreateLogger<Program>();
+        private readonly ILogger<Runner> _logger;
 
         /// <summary>
         /// A base class for safely executing and managing the state of a windows task/operation within the windows task scheduler.
         /// </summary>
-        public Runner() {
+        public Runner(ILogger<Runner> logger) {
+            _logger = logger;
            /*
             * Hypothesis: When the task scheduler and service managers call the 'stop' it trigger this ctr-c
             * this the the general termination signal hook in it with the new event. 

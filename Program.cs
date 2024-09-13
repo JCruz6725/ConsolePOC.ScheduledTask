@@ -1,8 +1,23 @@
-﻿
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NLog;
+using NLog.Extensions.Logging;
+
 namespace ConsolePOC.ScheduledTask {
     internal class Program {
-        static async Task Main(string[] args) {
-            Runner runner = new Runner();
+        static void Main(string[] args) {
+            var logging = LogManager.GetCurrentClassLogger();
+            var host = Host.CreateDefaultBuilder(args)
+                .ConfigureServices(services => {
+                    services.AddTransient<Runner>();
+                    services.AddLogging((log) => {
+                        log.ClearProviders();    
+                        log.AddNLog(); 
+                    });
+                })
+                .Build();
+            Runner runner = host.Services.GetRequiredService<Runner>();
             runner.Run(() => { DoSomething(5).Wait(); });
         }
 
